@@ -1,79 +1,142 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { ArrowRight, Check, LogIn } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ExternalLink, Check, X } from 'lucide-react';
+import { api } from '@/services/api';
 
-const BasecampConnect: React.FC = () => {
+const BasecampConnect = () => {
   const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const { toast } = useToast();
-
-  const handleConnect = () => {
-    setIsConnecting(true);
-    
-    // Simulate an API call to connect with Basecamp
-    setTimeout(() => {
-      setIsConnected(true);
-      setIsConnecting(false);
-      toast({
-        title: "Connected to Basecamp",
-        description: "Your Basecamp account has been successfully connected.",
-        variant: "default",
-      });
-    }, 1500);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  useEffect(() => {
+    // Check connection status on component mount
+    setIsConnected(api.basecamp.isConnected());
+  }, []);
+  
+  const handleConnect = async () => {
+    setIsSubmitting(true);
+    try {
+      const success = await api.basecamp.connect({ email, token });
+      if (success) {
+        setIsConnected(true);
+        setIsDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to connect to Basecamp:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
+  
+  const handleDisconnect = async () => {
+    await api.basecamp.disconnect();
+    setIsConnected(false);
+  };
+  
   return (
-    <Card className="p-6 border-dashed border-2 border-brand-100 bg-brand-50 dark:bg-gray-800 dark:border-gray-700">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {isConnected ? 'Connected to Basecamp' : 'Connect to Basecamp'}
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {isConnected 
-              ? 'Your Basecamp account is connected. Projects and teams are in sync.' 
-              : 'Connect your Basecamp account to sync projects and teams.'}
-          </p>
-        </div>
-        
-        <Button 
-          variant={isConnected ? "outline" : "default"} 
-          className={isConnected ? "bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 border-green-200" : ""}
-          onClick={handleConnect}
-          disabled={isConnecting || isConnected}
-        >
-          {isConnected ? (
-            <>
-              <Check className="mr-2 h-4 w-4" />
-              Connected
-            </>
-          ) : isConnecting ? (
-            "Connecting..."
-          ) : (
-            <>
-              <LogIn className="mr-2 h-4 w-4" />
-              Connect
-            </>
-          )}
-        </Button>
-      </div>
-      
-      {isConnected && (
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+    <>
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl">Basecamp Integration</CardTitle>
+          <CardDescription>Connect with Basecamp to sync your projects and tasks</CardDescription>
+        </CardHeader>
+        <CardContent>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              3 Projects synced
-            </span>
-            <Button variant="ghost" size="sm" className="text-brand-600 hover:text-brand-700 hover:bg-brand-50 px-0">
-              View details <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <div className="p-1.5 bg-green-100 rounded-full">
+                  <Check className="h-4 w-4 text-green-600" />
+                </div>
+              ) : (
+                <div className="p-1.5 bg-gray-100 rounded-full">
+                  <X className="h-4 w-4 text-gray-400" />
+                </div>
+              )}
+              <div>
+                <h4 className="font-medium">
+                  {isConnected ? 'Connected to Basecamp' : 'Not connected'}
+                </h4>
+                {isConnected && <p className="text-sm text-muted-foreground">Last synced: Just now</p>}
+              </div>
+            </div>
+            
+            {isConnected ? (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  Sync Now
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleDisconnect}>
+                  Disconnect
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={() => setIsDialogOpen(true)}>
+                Connect
+              </Button>
+            )}
           </div>
-        </div>
-      )}
-    </Card>
+        </CardContent>
+        {isConnected && (
+          <CardFooter>
+            <div className="text-sm text-muted-foreground">
+              <p>Your Scrum ceremonies will automatically sync with Basecamp.</p>
+            </div>
+          </CardFooter>
+        )}
+      </Card>
+      
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Connect to Basecamp</DialogTitle>
+            <DialogDescription>
+              Enter your Basecamp credentials to sync your projects and tasks.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">Email</Label>
+              <Input
+                id="email"
+                placeholder="your@email.com"
+                className="col-span-3"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="token" className="text-right">API Token</Label>
+              <Input
+                id="token"
+                type="password"
+                placeholder="Your Basecamp API token"
+                className="col-span-3"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+              />
+            </div>
+            <div className="col-span-4 text-sm text-muted-foreground">
+              <a href="https://basecamp.com/api" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                <ExternalLink className="h-3 w-3" /> How to get your API token
+              </a>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleConnect} disabled={!email || !token || isSubmitting}>
+              {isSubmitting ? 'Connecting...' : 'Connect'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

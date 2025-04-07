@@ -1,0 +1,25 @@
+
+export interface Meeting {
+  id: string;
+  title: string;
+  type: 'standup' | 'planning' | 'review' | 'retrospective' | 'other';
+  sprintId?: string;
+  date: string; // ISO string
+  time: string;
+  duration: string;
+  participants: number;
+  meetingLink?: string;
+  recording?: boolean;
+  recordingUrl?: string;
+}
+
+export interface ScheduleMeetingInput {
+  title: string;
+  type: 'standup' | 'planning' | 'review' | 'retrospective' | 'other';
+  sprintId?: string; 
+  date: string;
+  time: string;
+  duration: string;
+  participants: string[]; // email addresses
+  meetingLink?: string;
+}
