@@ -9,6 +9,19 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Generate a random ID
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
+// Generate a readable room name for Jitsi
+const generateJitsiRoomName = (type: string, id: string) => {
+  const timestamp = new Date().getTime().toString().slice(-6);
+  return `scrum-${type}-${id}-${timestamp}`;
+};
+
+// Format Jitsi Meet URL
+const formatJitsiUrl = (roomName: string) => {
+  // Encode the room name to make it URL-safe
+  const encodedRoom = encodeURIComponent(roomName);
+  return `https://meet.jit.si/${encodedRoom}`;
+};
+
 // Local Storage Keys
 const MEETINGS_KEY = 'scrum_extension_meetings';
 const SPRINTS_KEY = 'scrum_extension_sprints';
@@ -25,7 +38,10 @@ const initializeLocalStorage = () => {
         time: "10:00 AM",
         duration: "15 min",
         type: "standup",
-        participants: 7
+        participants: 7,
+        jitsiRoomName: "scrum-standup-1-342576",
+        meetingLink: "https://meet.jit.si/scrum-standup-1-342576",
+        status: "scheduled"
       },
       {
         id: '2',
@@ -34,7 +50,10 @@ const initializeLocalStorage = () => {
         time: "2:00 PM",
         duration: "1 hour",
         type: "review",
-        participants: 12
+        participants: 12,
+        jitsiRoomName: "scrum-review-2-342578",
+        meetingLink: "https://meet.jit.si/scrum-review-2-342578",
+        status: "scheduled"
       },
       {
         id: '3',
@@ -43,7 +62,10 @@ const initializeLocalStorage = () => {
         time: "4:00 PM",
         duration: "45 min",
         type: "retrospective",
-        participants: 7
+        participants: 7,
+        jitsiRoomName: "scrum-retrospective-3-342579",
+        meetingLink: "https://meet.jit.si/scrum-retrospective-3-342579",
+        status: "scheduled"
       }
     ];
     
@@ -57,7 +79,10 @@ const initializeLocalStorage = () => {
         type: "planning",
         participants: 7,
         recording: true,
-        recordingUrl: "#"
+        recordingUrl: "#",
+        jitsiRoomName: "scrum-planning-4-342580",
+        meetingLink: "https://meet.jit.si/scrum-planning-4-342580",
+        status: "completed"
       },
       {
         id: '5',
@@ -68,7 +93,10 @@ const initializeLocalStorage = () => {
         type: "review",
         participants: 12,
         recording: true,
-        recordingUrl: "#"
+        recordingUrl: "#",
+        jitsiRoomName: "scrum-review-5-342581",
+        meetingLink: "https://meet.jit.si/scrum-review-5-342581",
+        status: "completed"
       }
     ];
     
@@ -126,9 +154,11 @@ export const api = {
     schedule: async (meetingData: ScheduleMeetingInput): Promise<Meeting> => {
       await delay(700);
       
-      // Generate meeting link using Jitsi
       const meetingId = generateId();
-      const jitsiLink = meetingData.meetingLink || `https://meet.jit.si/scrum-meeting-${meetingId}`;
+      const jitsiRoomName = generateJitsiRoomName(meetingData.type, meetingId);
+      
+      // Generate meeting link using Jitsi
+      const jitsiLink = meetingData.meetingLink || formatJitsiUrl(jitsiRoomName);
       
       const newMeeting: Meeting = {
         id: meetingId,
@@ -140,6 +170,8 @@ export const api = {
         duration: meetingData.duration,
         participants: meetingData.participants.length,
         meetingLink: jitsiLink,
+        jitsiRoomName: jitsiRoomName,
+        status: 'scheduled',
         recording: false
       };
       
@@ -157,6 +189,46 @@ export const api = {
       const updatedMeetings = meetings.filter((meeting: Meeting) => meeting.id !== id);
       localStorage.setItem(MEETINGS_KEY, JSON.stringify(updatedMeetings));
       toast.success("Meeting deleted successfully!");
+    },
+    
+    startMeeting: async (id: string): Promise<Meeting> => {
+      await delay(300);
+      const meetings = JSON.parse(localStorage.getItem(MEETINGS_KEY) || '[]');
+      const meetingIndex = meetings.findIndex((meeting: Meeting) => meeting.id === id);
+      
+      if (meetingIndex === -1) {
+        throw new Error('Meeting not found');
+      }
+      
+      meetings[meetingIndex].status = 'in-progress';
+      localStorage.setItem(MEETINGS_KEY, JSON.stringify(meetings));
+      
+      window.open(meetings[meetingIndex].meetingLink, '_blank');
+      toast.success("Meeting started!");
+      
+      return meetings[meetingIndex];
+    },
+    
+    completeMeeting: async (id: string, recordingUrl?: string): Promise<Meeting> => {
+      await delay(500);
+      const meetings = JSON.parse(localStorage.getItem(MEETINGS_KEY) || '[]');
+      const meetingIndex = meetings.findIndex((meeting: Meeting) => meeting.id === id);
+      
+      if (meetingIndex === -1) {
+        throw new Error('Meeting not found');
+      }
+      
+      meetings[meetingIndex].status = 'completed';
+      
+      if (recordingUrl) {
+        meetings[meetingIndex].recording = true;
+        meetings[meetingIndex].recordingUrl = recordingUrl;
+      }
+      
+      localStorage.setItem(MEETINGS_KEY, JSON.stringify(meetings));
+      toast.success("Meeting completed!");
+      
+      return meetings[meetingIndex];
     }
   },
   

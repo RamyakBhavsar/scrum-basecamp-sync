@@ -1,28 +1,33 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { api } from '@/services/api';
 import { ScheduleMeetingInput } from '@/models/Meeting';
+import { useQuery } from '@tanstack/react-query';
 
 interface ScheduleMeetingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onMeetingScheduled: () => void;
+  initialType?: 'standup' | 'planning' | 'review' | 'retrospective' | 'other';
 }
 
 export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({ 
   open, 
   onOpenChange,
-  onMeetingScheduled
+  onMeetingScheduled,
+  initialType = 'standup'
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useCustomLink, setUseCustomLink] = useState(false);
   const [formData, setFormData] = useState<ScheduleMeetingInput>({
     title: '',
-    type: 'standup',
+    type: initialType,
     date: new Date().toISOString().split('T')[0],
     time: '10:00',
     duration: '30 min',
@@ -30,8 +35,67 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
     meetingLink: ''
   });
 
+  // Reset form when dialog opens/closes or initialType changes
+  useEffect(() => {
+    if (open) {
+      const defaultTitle = getDefaultTitleForType(initialType);
+      setFormData({
+        title: defaultTitle,
+        type: initialType,
+        date: new Date().toISOString().split('T')[0],
+        time: '10:00',
+        duration: getDefaultDurationForType(initialType),
+        participants: [],
+        meetingLink: ''
+      });
+      setUseCustomLink(false);
+    }
+  }, [open, initialType]);
+
+  // Fetch sprints for dropdown
+  const { data: sprints = [] } = useQuery({
+    queryKey: ['sprints'],
+    queryFn: api.sprints.getAll,
+    enabled: open
+  });
+
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'type') {
+      // Auto-update title when type changes
+      const defaultTitle = getDefaultTitleForType(value as any);
+      const defaultDuration = getDefaultDurationForType(value as any);
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        [field]: value, 
+        title: prev.title === getDefaultTitleForType(prev.type as any) ? defaultTitle : prev.title,
+        duration: prev.duration === getDefaultDurationForType(prev.type as any) ? defaultDuration : prev.duration
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const getDefaultTitleForType = (type: string): string => {
+    const titles: Record<string, string> = {
+      standup: 'Daily Standup',
+      planning: 'Sprint Planning',
+      review: 'Sprint Review',
+      retrospective: 'Sprint Retrospective',
+      other: 'Team Meeting'
+    };
+    return titles[type] || 'Team Meeting';
+  };
+
+  const getDefaultDurationForType = (type: string): string => {
+    const durations: Record<string, string> = {
+      standup: '15 min',
+      planning: '2 hours',
+      review: '1 hour',
+      retrospective: '1 hour',
+      other: '30 min'
+    };
+    return durations[type] || '30 min';
   };
 
   const handleParticipantChange = (value: string) => {
@@ -47,15 +111,6 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
       await api.meetings.schedule(formData);
       onMeetingScheduled();
       onOpenChange(false);
-      setFormData({
-        title: '',
-        type: 'standup',
-        date: new Date().toISOString().split('T')[0],
-        time: '10:00',
-        duration: '30 min',
-        participants: [],
-        meetingLink: ''
-      });
     } catch (error) {
       console.error('Failed to schedule meeting:', error);
     } finally {
@@ -63,22 +118,11 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
     }
   };
 
-  const getMeetingTypeLabel = (type: string): string => {
-    const labels: Record<string, string> = {
-      standup: 'Daily Standup',
-      planning: 'Sprint Planning',
-      review: 'Sprint Review',
-      retrospective: 'Retrospective',
-      other: 'Other'
-    };
-    return labels[type] || type;
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Schedule a Meeting</DialogTitle>
+          <DialogTitle>Schedule a {getMeetingTypeLabel(formData.type)}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
@@ -110,6 +154,28 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
+          
+          {(formData.type === 'planning' || formData.type === 'review' || formData.type === 'retrospective') && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sprintId" className="text-right">Sprint</Label>
+              <Select
+                value={formData.sprintId || ''}
+                onValueChange={(value) => handleChange('sprintId', value)}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select Sprint" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {sprints.map((sprint: any) => (
+                    <SelectItem key={sprint.id} value={sprint.id}>
+                      {sprint.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="date" className="text-right">Date</Label>
@@ -164,15 +230,29 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="meetingLink" className="text-right">Meeting Link</Label>
-            <Input
-              id="meetingLink"
-              placeholder="Optional custom meeting URL"
-              className="col-span-3"
-              value={formData.meetingLink}
-              onChange={(e) => handleChange('meetingLink', e.target.value)}
-            />
+            <Label htmlFor="custom-link" className="text-right">Custom Link</Label>
+            <div className="flex items-center space-x-2 col-span-3">
+              <Switch
+                id="custom-link"
+                checked={useCustomLink}
+                onCheckedChange={setUseCustomLink}
+              />
+              <Label htmlFor="custom-link" className="cursor-pointer">Use custom meeting URL</Label>
+            </div>
           </div>
+          
+          {useCustomLink && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="meetingLink" className="text-right">Meeting URL</Label>
+              <Input
+                id="meetingLink"
+                placeholder="Custom meeting URL"
+                className="col-span-3"
+                value={formData.meetingLink}
+                onChange={(e) => handleChange('meetingLink', e.target.value)}
+              />
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -184,3 +264,14 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
     </Dialog>
   );
 };
+
+function getMeetingTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    standup: 'Daily Standup',
+    planning: 'Sprint Planning',
+    review: 'Sprint Review',
+    retrospective: 'Retrospective',
+    other: 'Meeting'
+  };
+  return labels[type] || type;
+}

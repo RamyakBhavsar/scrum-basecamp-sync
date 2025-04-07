@@ -11,6 +11,8 @@ export interface Meeting {
   meetingLink?: string;
   recording?: boolean;
   recordingUrl?: string;
+  jitsiRoomName?: string; // Added for Jitsi integration
+  status?: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
 }
 
 export interface ScheduleMeetingInput {

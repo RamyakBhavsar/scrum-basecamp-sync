@@ -43,6 +43,15 @@ const SprintReviews = () => {
     setIsDialogOpen(true);
   };
 
+  // Start a meeting and open the Jitsi link
+  const handleJoinMeeting = async (meeting: Meeting) => {
+    try {
+      await api.meetings.startMeeting(meeting.id);
+    } catch (error) {
+      console.error('Failed to start meeting:', error);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -106,7 +115,7 @@ const SprintReviews = () => {
                         </div>
                         
                         <div className="pt-2 flex gap-2">
-                          <Button className="flex-1" onClick={() => window.open(review.meetingLink, '_blank')}>
+                          <Button className="flex-1" onClick={() => handleJoinMeeting(review)}>
                             <Video className="mr-2 h-4 w-4" />
                             Join Meeting
                           </Button>
@@ -196,6 +205,7 @@ const SprintReviews = () => {
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen}
         onMeetingScheduled={handleMeetingScheduled}
+        initialType="review"
       />
     </MainLayout>
   );
