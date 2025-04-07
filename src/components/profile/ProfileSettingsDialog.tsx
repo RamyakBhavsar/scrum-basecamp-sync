@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProfileSettingsDialogProps {
   open: boolean;
@@ -37,7 +37,8 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
     
     // Simulate API call with a timeout
@@ -60,58 +61,60 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({
             Update your personal information and profile settings.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col items-center mb-4">
-          <Avatar className="h-24 w-24 mb-4">
-            <AvatarImage src={formData.avatarUrl} />
-            <AvatarFallback className="text-xl">JD</AvatarFallback>
-          </Avatar>
-          <Button variant="outline" size="sm">Change Avatar</Button>
-        </div>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="fullName" className="text-right">Full Name</Label>
-            <Input
-              id="fullName"
-              value={formData.fullName}
-              onChange={(e) => handleChange('fullName', e.target.value)}
-              className="col-span-3"
-            />
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col items-center mb-4">
+            <Avatar className="h-24 w-24 mb-4">
+              <AvatarImage src={formData.avatarUrl} />
+              <AvatarFallback className="text-xl">JD</AvatarFallback>
+            </Avatar>
+            <Button type="button" variant="outline" size="sm">Change Avatar</Button>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleChange('email', e.target.value)}
-              className="col-span-3"
-            />
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="fullName" className="text-right">Full Name</Label>
+              <Input
+                id="fullName"
+                value={formData.fullName}
+                onChange={(e) => handleChange('fullName', e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role" className="text-right">Role</Label>
+              <Input
+                id="role"
+                value={formData.role}
+                onChange={(e) => handleChange('role', e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="team" className="text-right">Team</Label>
+              <Input
+                id="team"
+                value={formData.team}
+                onChange={(e) => handleChange('team', e.target.value)}
+                className="col-span-3"
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="role" className="text-right">Role</Label>
-            <Input
-              id="role"
-              value={formData.role}
-              onChange={(e) => handleChange('role', e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="team" className="text-right">Team</Label>
-            <Input
-              id="team"
-              value={formData.team}
-              onChange={(e) => handleChange('team', e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

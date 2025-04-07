@@ -21,6 +21,18 @@ export function Header() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
 
+  const handleOpenProfile = () => {
+    setProfileOpen(true);
+  };
+
+  const handleOpenPassword = () => {
+    setPasswordOpen(true);
+  };
+
+  const handleNavigateToSettings = () => {
+    navigate('/settings');
+  };
+
   return (
     <header className="h-16 border-b border-border px-6 flex items-center justify-between bg-background">
       <div className="flex items-center gap-4 w-full max-w-md">
@@ -52,23 +64,19 @@ export function Header() {
               </Avatar>
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 bg-background">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setProfileOpen(true)}>
+            <DropdownMenuItem onClick={handleOpenProfile}>
               <User className="mr-2 h-4 w-4" />
               <span>Profile Settings</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPasswordOpen(true)}>
+            <DropdownMenuItem onClick={handleOpenPassword}>
               <Settings className="mr-2 h-4 w-4" />
               <span>Change Password</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Application Settings</span>
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => console.log("Logging out")}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
