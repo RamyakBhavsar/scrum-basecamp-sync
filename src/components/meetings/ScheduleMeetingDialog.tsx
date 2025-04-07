@@ -61,19 +61,30 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
 
   const handleChange = (field: string, value: string) => {
     if (field === 'type') {
+      // Ensure value is a valid meeting type before setting it
+      const meetingType = validateMeetingType(value);
+      
       // Auto-update title when type changes
-      const defaultTitle = getDefaultTitleForType(value as any);
-      const defaultDuration = getDefaultDurationForType(value as any);
+      const defaultTitle = getDefaultTitleForType(meetingType);
+      const defaultDuration = getDefaultDurationForType(meetingType);
       
       setFormData(prev => ({ 
         ...prev, 
-        [field]: value, 
-        title: prev.title === getDefaultTitleForType(prev.type as any) ? defaultTitle : prev.title,
-        duration: prev.duration === getDefaultDurationForType(prev.type as any) ? defaultDuration : prev.duration
+        type: meetingType, 
+        title: prev.title === getDefaultTitleForType(prev.type) ? defaultTitle : prev.title,
+        duration: prev.duration === getDefaultDurationForType(prev.type) ? defaultDuration : prev.duration
       }));
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
     }
+  };
+
+  // Helper function to validate that the type is one of the allowed meeting types
+  const validateMeetingType = (type: string): 'standup' | 'planning' | 'review' | 'retrospective' | 'other' => {
+    const validTypes = ['standup', 'planning', 'review', 'retrospective', 'other'];
+    return validTypes.includes(type) 
+      ? type as 'standup' | 'planning' | 'review' | 'retrospective' | 'other'
+      : 'other'; // Default to 'other' if an invalid type is provided
   };
 
   const getDefaultTitleForType = (type: string): string => {
