@@ -4,7 +4,7 @@ import { Meeting, ScheduleMeetingInput } from '@/models/Meeting';
 import { Sprint, SprintInput } from '@/models/Sprint';
 import { toast } from "sonner";
 
-// Generate a readable room name for Jitsi
+// Generate readable room names
 const generateJitsiRoomName = (type: string, id: string) => {
   const timestamp = new Date().getTime().toString().slice(-6);
   return `scrum-${type}-${id}-${timestamp}`;
@@ -12,9 +12,21 @@ const generateJitsiRoomName = (type: string, id: string) => {
 
 // Format Jitsi Meet URL
 const formatJitsiUrl = (roomName: string) => {
-  // Encode the room name to make it URL-safe
   const encodedRoom = encodeURIComponent(roomName);
   return `https://meet.jit.si/${encodedRoom}`;
+};
+
+// Generate Google Meet URL (simplified mock implementation)
+const generateGoogleMeetLink = () => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz';
+  let result = 'https://meet.google.com/';
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    if (i < 2) result += '-';
+  }
+  return result;
 };
 
 export const supabaseApi = {
@@ -124,6 +136,8 @@ export const supabaseApi = {
         return null;
       }
       
+      if (!data) return null;
+      
       return {
         id: data.id,
         title: data.title,
@@ -142,12 +156,20 @@ export const supabaseApi = {
     },
     
     schedule: async (meetingData: ScheduleMeetingInput): Promise<Meeting> => {
-      const { user } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
       
-      // Generate meeting link using Jitsi
-      const jitsiRoomName = generateJitsiRoomName(meetingData.type, crypto.randomUUID());
-      const jitsiLink = meetingData.meetingLink || formatJitsiUrl(jitsiRoomName);
+      // Generate meeting link based on preferred platform
+      let jitsiRoomName = '';
+      let meetingLink = '';
+      
+      if (meetingData.preferredPlatform === 'google-meet') {
+        meetingLink = generateGoogleMeetLink();
+      } else {
+        // Default to Jitsi
+        jitsiRoomName = generateJitsiRoomName(meetingData.type, crypto.randomUUID());
+        meetingLink = meetingData.meetingLink || formatJitsiUrl(jitsiRoomName);
+      }
       
       const { data, error } = await supabase
         .from('meetings')
@@ -159,7 +181,7 @@ export const supabaseApi = {
           time: meetingData.time,
           duration: meetingData.duration,
           participants: meetingData.participants.length,
-          meeting_link: jitsiLink,
+          meeting_link: meetingLink,
           jitsi_room_name: jitsiRoomName,
           status: 'scheduled',
           user_id: user.id
@@ -174,6 +196,9 @@ export const supabaseApi = {
       }
       
       toast.success("Meeting scheduled successfully!");
+      
+      if (!data) throw new Error('Failed to retrieve created meeting data');
+      
       return {
         id: data.id,
         title: data.title,
@@ -220,6 +245,8 @@ export const supabaseApi = {
         throw error;
       }
       
+      if (!data) throw new Error('Failed to retrieve updated meeting data');
+      
       window.open(data.meeting_link, '_blank');
       toast.success("Meeting started!");
       
@@ -260,6 +287,8 @@ export const supabaseApi = {
         toast.error('Failed to complete meeting');
         throw error;
       }
+      
+      if (!data) throw new Error('Failed to retrieve updated meeting data');
       
       toast.success("Meeting completed!");
       
@@ -317,6 +346,8 @@ export const supabaseApi = {
         return null;
       }
       
+      if (!data) return null;
+      
       return {
         id: data.id,
         title: data.title,
@@ -327,7 +358,7 @@ export const supabaseApi = {
     },
     
     create: async (sprintData: SprintInput): Promise<Sprint> => {
-      const { user } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
       
       const { data, error } = await supabase
@@ -347,6 +378,8 @@ export const supabaseApi = {
         toast.error('Failed to create sprint');
         throw error;
       }
+      
+      if (!data) throw new Error('Failed to retrieve created sprint data');
       
       toast.success("Sprint created successfully!");
       return {
@@ -378,6 +411,8 @@ export const supabaseApi = {
         toast.error('Failed to update sprint');
         throw error;
       }
+      
+      if (!data) throw new Error('Failed to retrieve updated sprint data');
       
       toast.success("Sprint updated successfully!");
       return {

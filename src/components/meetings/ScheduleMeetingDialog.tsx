@@ -1,129 +1,101 @@
 
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useState } from 'react';
+import { 
+  Dialog, DialogContent, DialogHeader, 
+  DialogTitle, DialogFooter, DialogClose 
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { 
+  Select, SelectContent, SelectItem, 
+  SelectTrigger, SelectValue 
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { supabaseApi } from '@/services/supabaseApi';
-import { ScheduleMeetingInput } from '@/models/Meeting';
-import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-interface ScheduleMeetingDialogProps {
+export const ScheduleMeetingDialog = ({ 
+  open, 
+  onOpenChange, 
+  onMeetingScheduled 
+}: { 
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onMeetingScheduled: () => void;
-  initialType?: 'standup' | 'planning' | 'review' | 'retrospective' | 'other';
-}
-
-export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({ 
-  open, 
-  onOpenChange,
-  onMeetingScheduled,
-  initialType = 'standup'
 }) => {
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState<'standup' | 'planning' | 'review' | 'retrospective' | 'other'>('standup');
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [time, setTime] = useState('09:00');
+  const [duration, setDuration] = useState('30m');
+  const [participants, setParticipants] = useState<string[]>(['']);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [useCustomLink, setUseCustomLink] = useState(false);
-  const [formData, setFormData] = useState<ScheduleMeetingInput>({
-    title: '',
-    type: initialType,
-    date: new Date().toISOString().split('T')[0],
-    time: '10:00',
-    duration: '30 min',
-    participants: [],
-    meetingLink: ''
-  });
+  const [preferredPlatform, setPreferredPlatform] = useState<'jitsi' | 'google-meet'>('jitsi');
 
-  // Reset form when dialog opens/closes or initialType changes
-  useEffect(() => {
-    if (open) {
-      const defaultTitle = getDefaultTitleForType(initialType);
-      setFormData({
-        title: defaultTitle,
-        type: initialType,
-        date: new Date().toISOString().split('T')[0],
-        time: '10:00',
-        duration: getDefaultDurationForType(initialType),
-        participants: [],
-        meetingLink: ''
-      });
-      setUseCustomLink(false);
+  const addParticipant = () => {
+    setParticipants([...participants, '']);
+  };
+
+  const removeParticipant = (index: number) => {
+    const updatedParticipants = [...participants];
+    updatedParticipants.splice(index, 1);
+    setParticipants(updatedParticipants);
+  };
+
+  const updateParticipant = (index: number, value: string) => {
+    const updatedParticipants = [...participants];
+    updatedParticipants[index] = value;
+    setParticipants(updatedParticipants);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title) {
+      toast.error('Please enter a meeting title');
+      return;
     }
-  }, [open, initialType]);
-
-  // Fetch sprints for dropdown
-  const { data: sprints = [] } = useQuery({
-    queryKey: ['sprints'],
-    queryFn: supabaseApi.sprints.getAll,
-    enabled: open
-  });
-
-  const handleChange = (field: string, value: string) => {
-    if (field === 'type') {
-      // Ensure value is a valid meeting type before setting it
-      const meetingType = validateMeetingType(value);
-      
-      // Auto-update title when type changes
-      const defaultTitle = getDefaultTitleForType(meetingType);
-      const defaultDuration = getDefaultDurationForType(meetingType);
-      
-      setFormData(prev => ({ 
-        ...prev, 
-        type: meetingType, 
-        title: prev.title === getDefaultTitleForType(prev.type) ? defaultTitle : prev.title,
-        duration: prev.duration === getDefaultDurationForType(prev.type) ? defaultDuration : prev.duration
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+    
+    if (!date) {
+      toast.error('Please select a date');
+      return;
     }
-  };
-
-  // Helper function to validate that the type is one of the allowed meeting types
-  const validateMeetingType = (type: string): 'standup' | 'planning' | 'review' | 'retrospective' | 'other' => {
-    const validTypes = ['standup', 'planning', 'review', 'retrospective', 'other'];
-    return validTypes.includes(type) 
-      ? type as 'standup' | 'planning' | 'review' | 'retrospective' | 'other'
-      : 'other'; // Default to 'other' if an invalid type is provided
-  };
-
-  const getDefaultTitleForType = (type: string): string => {
-    const titles: Record<string, string> = {
-      standup: 'Daily Standup',
-      planning: 'Sprint Planning',
-      review: 'Sprint Review',
-      retrospective: 'Sprint Retrospective',
-      other: 'Team Meeting'
-    };
-    return titles[type] || 'Team Meeting';
-  };
-
-  const getDefaultDurationForType = (type: string): string => {
-    const durations: Record<string, string> = {
-      standup: '15 min',
-      planning: '2 hours',
-      review: '1 hour',
-      retrospective: '1 hour',
-      other: '30 min'
-    };
-    return durations[type] || '30 min';
-  };
-
-  const handleParticipantChange = (value: string) => {
-    // In a real app, this would be a proper participant selector
-    // For now, we'll just use a comma-separated list
-    const emails = value.split(',').map(email => email.trim());
-    setFormData(prev => ({ ...prev, participants: emails }));
-  };
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
+    
     try {
-      await supabaseApi.meetings.schedule(formData);
-      onMeetingScheduled();
+      setIsSubmitting(true);
+      
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      const filteredParticipants = participants.filter(p => p.trim() !== '');
+      
+      await supabaseApi.meetings.schedule({
+        title,
+        type,
+        date: formattedDate,
+        time,
+        duration,
+        participants: filteredParticipants,
+        preferredPlatform
+      });
+      
+      // Reset form
+      setTitle('');
+      setType('standup');
+      setDate(new Date());
+      setTime('09:00');
+      setDuration('30m');
+      setParticipants(['']);
+      setPreferredPlatform('jitsi');
+      
       onOpenChange(false);
+      onMeetingScheduled();
     } catch (error) {
-      console.error('Failed to schedule meeting:', error);
+      console.error('Error scheduling meeting:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -131,30 +103,30 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Schedule a {getMeetingTypeLabel(formData.type)}</DialogTitle>
+          <DialogTitle>Schedule Meeting</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">Title</Label>
-            <Input
-              id="title"
-              placeholder="Meeting title"
-              className="col-span-3"
-              value={formData.title}
-              onChange={(e) => handleChange('title', e.target.value)}
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Meeting Title</Label>
+            <Input 
+              id="title" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+              placeholder="Sprint Planning Meeting"
             />
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="type" className="text-right">Type</Label>
-            <Select
-              value={formData.type}
-              onValueChange={(value) => handleChange('type', value)}
+          <div className="space-y-2">
+            <Label htmlFor="type">Meeting Type</Label>
+            <Select 
+              value={type} 
+              onValueChange={(value) => setType(value as any)}
             >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Meeting Type" />
+              <SelectTrigger id="type">
+                <SelectValue placeholder="Select meeting type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="standup">Daily Standup</SelectItem>
@@ -166,123 +138,131 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
             </Select>
           </div>
           
-          {(formData.type === 'planning' || formData.type === 'review' || formData.type === 'retrospective') && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sprintId" className="text-right">Sprint</Label>
-              <Select
-                value={formData.sprintId || ''}
-                onValueChange={(value) => handleChange('sprintId', value)}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select Sprint" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {sprints.map((sprint: any) => (
-                    <SelectItem key={sprint.id} value={sprint.id}>
-                      {sprint.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-          )}
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="date" className="text-right">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              className="col-span-3"
-              value={formData.date}
-              onChange={(e) => handleChange('date', e.target.value)}
-            />
+            
+            <div className="space-y-2">
+              <Label htmlFor="time">Time</Label>
+              <Input 
+                id="time" 
+                type="time" 
+                value={time} 
+                onChange={(e) => setTime(e.target.value)} 
+              />
+            </div>
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="time" className="text-right">Time</Label>
-            <Input
-              id="time"
-              type="time"
-              className="col-span-3"
-              value={formData.time}
-              onChange={(e) => handleChange('time', e.target.value)}
-            />
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="duration" className="text-right">Duration</Label>
-            <Select
-              value={formData.duration}
-              onValueChange={(value) => handleChange('duration', value)}
+          <div className="space-y-2">
+            <Label htmlFor="duration">Duration</Label>
+            <Select 
+              value={duration} 
+              onValueChange={setDuration}
             >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Duration" />
+              <SelectTrigger id="duration">
+                <SelectValue placeholder="Select duration" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="15 min">15 minutes</SelectItem>
-                <SelectItem value="30 min">30 minutes</SelectItem>
-                <SelectItem value="45 min">45 minutes</SelectItem>
-                <SelectItem value="1 hour">1 hour</SelectItem>
-                <SelectItem value="1.5 hours">1.5 hours</SelectItem>
-                <SelectItem value="2 hours">2 hours</SelectItem>
+                <SelectItem value="15m">15 minutes</SelectItem>
+                <SelectItem value="30m">30 minutes</SelectItem>
+                <SelectItem value="45m">45 minutes</SelectItem>
+                <SelectItem value="1h">1 hour</SelectItem>
+                <SelectItem value="1h 30m">1 hour 30 minutes</SelectItem>
+                <SelectItem value="2h">2 hours</SelectItem>
               </SelectContent>
             </Select>
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="participants" className="text-right">Participants</Label>
-            <Input
-              id="participants"
-              placeholder="Email addresses (comma-separated)"
-              className="col-span-3"
-              onChange={(e) => handleParticipantChange(e.target.value)}
-            />
+          <div className="space-y-2">
+            <Label>Meeting Platform</Label>
+            <RadioGroup 
+              defaultValue="jitsi" 
+              value={preferredPlatform}
+              onValueChange={(value) => setPreferredPlatform(value as 'jitsi' | 'google-meet')}
+              className="flex flex-col space-y-1"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="jitsi" id="jitsi" />
+                <Label htmlFor="jitsi" className="font-normal">Jitsi Meet (Default)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="google-meet" id="google-meet" />
+                <Label htmlFor="google-meet" className="font-normal">Google Meet</Label>
+              </div>
+            </RadioGroup>
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="custom-link" className="text-right">Custom Link</Label>
-            <div className="flex items-center space-x-2 col-span-3">
-              <Switch
-                id="custom-link"
-                checked={useCustomLink}
-                onCheckedChange={setUseCustomLink}
-              />
-              <Label htmlFor="custom-link" className="cursor-pointer">Use custom meeting URL</Label>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label>Participants</Label>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={addParticipant}
+              >
+                Add Participant
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              {participants.map((participant, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input 
+                    value={participant} 
+                    onChange={(e) => updateParticipant(index, e.target.value)} 
+                    placeholder="Email address"
+                    className="flex-grow"
+                  />
+                  {participants.length > 1 && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => removeParticipant(index)}
+                      className="h-10 px-2"
+                    >
+                      ✕
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
           
-          {useCustomLink && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="meetingLink" className="text-right">Meeting URL</Label>
-              <Input
-                id="meetingLink"
-                placeholder="Custom meeting URL"
-                className="col-span-3"
-                value={formData.meetingLink}
-                onChange={(e) => handleChange('meetingLink', e.target.value)}
-              />
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={!formData.title || !formData.date || !formData.time || isSubmitting}>
-            {isSubmitting ? 'Scheduling...' : 'Schedule Meeting'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="pt-4">
+            <DialogClose asChild>
+              <Button variant="outline" type="button">Cancel</Button>
+            </DialogClose>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Scheduling...' : 'Schedule Meeting'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 };
-
-function getMeetingTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    standup: 'Daily Standup',
-    planning: 'Sprint Planning',
-    review: 'Sprint Review',
-    retrospective: 'Retrospective',
-    other: 'Meeting'
-  };
-  return labels[type] || type;
-}

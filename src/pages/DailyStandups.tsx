@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar, Clock, Send, Video } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
+import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabaseApi } from '@/services/supabaseApi';
+import { Meeting } from '@/models/Meeting';
 
+// Mock data for standup updates (in a real app, this would come from the backend)
 const standupHistoryItems = [
   {
     id: 1,
@@ -78,6 +83,16 @@ const DailyStandups = () => {
   const [blockers, setBlockers] = useState('');
   const { toast } = useToast();
   
+  // Get upcoming standup meetings
+  const { data: upcomingStandups = [], isLoading: isLoadingStandups } = 
+    useQuery({
+      queryKey: ['meetings', 'standups'],
+      queryFn: async () => {
+        const allUpcoming = await supabaseApi.meetings.getUpcoming();
+        return allUpcoming.filter(meeting => meeting.type === 'standup');
+      }
+    });
+  
   const handleSubmitUpdate = () => {
     if (!yesterday || !today) {
       toast({
@@ -101,6 +116,38 @@ const DailyStandups = () => {
     setBlockers('');
   };
   
+  const startStandupMeeting = async (meeting?: Meeting) => {
+    if (meeting) {
+      try {
+        await supabaseApi.meetings.startMeeting(meeting.id);
+      } catch (error) {
+        console.error('Failed to start meeting:', error);
+        toast({
+          title: "Failed to start meeting",
+          description: "There was an error starting the meeting.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      // If there's no upcoming standup, create a new one and start it
+      toast({
+        title: "No scheduled standup",
+        description: "Please schedule a standup meeting first.",
+        variant: "default",
+      });
+    }
+  };
+  
+  const currentDate = format(new Date(), 'MMMM d, yyyy');
+  const currentTime = format(new Date(), 'h:mm a');
+  
+  const getNextStandup = () => {
+    if (upcomingStandups.length === 0) return null;
+    return upcomingStandups[0];
+  };
+  
+  const nextStandup = getNextStandup();
+  
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -111,7 +158,7 @@ const DailyStandups = () => {
               Share your daily progress and discuss any blockers with your team.
             </p>
           </div>
-          <Button>
+          <Button onClick={() => startStandupMeeting(nextStandup)}>
             <Video className="mr-2 h-4 w-4" />
             Start Meeting
           </Button>
@@ -130,9 +177,9 @@ const DailyStandups = () => {
                   <CardTitle>Today's Standup</CardTitle>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="mr-2 h-4 w-4" />
-                    <span>April 7, 2025</span>
+                    <span>{currentDate}</span>
                     <Clock className="mx-2 h-4 w-4" />
-                    <span>10:00 AM</span>
+                    <span>{currentTime}</span>
                   </div>
                 </div>
               </CardHeader>

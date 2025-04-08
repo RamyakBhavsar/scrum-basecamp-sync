@@ -1,22 +1,30 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Download, Plus, Search, Video } from 'lucide-react';
+import { Calendar, Clock, Download, Plus, Search, Trash, Edit, Video } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { supabaseApi } from '@/services/supabaseApi';
 import { Meeting } from '@/models/Meeting';
 import { ScheduleMeetingDialog } from '@/components/meetings/ScheduleMeetingDialog';
 import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const Meetings = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [meetingType, setMeetingType] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [meetingToDelete, setMeetingToDelete] = useState<string | null>(null);
   
   // Get meetings from API
   const { data: upcomingMeetings = [], isLoading: isLoadingUpcoming, refetch: refetchUpcoming } = 
@@ -53,10 +61,41 @@ const Meetings = () => {
   const handleStartMeeting = async (meeting: Meeting) => {
     try {
       await supabaseApi.meetings.startMeeting(meeting.id);
+      refetchUpcoming();
+      refetchPast();
     } catch (error) {
       console.error('Failed to start meeting:', error);
       toast.error('Failed to start meeting');
     }
+  };
+  
+  // Delete a meeting
+  const handleDeleteMeeting = async (id: string) => {
+    try {
+      await supabaseApi.meetings.delete(id);
+      refetchUpcoming();
+      refetchPast();
+      setMeetingToDelete(null);
+      toast.success('Meeting deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete meeting:', error);
+      toast.error('Failed to delete meeting');
+    }
+  };
+  
+  // Handle meeting edit (future implementation)
+  const handleEditMeeting = (meeting: Meeting) => {
+    // For now, just show a toast that this feature is coming soon
+    toast.info('Edit meeting feature coming soon');
+  };
+
+  // Utility function to format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
   
   return (
@@ -105,6 +144,7 @@ const Meetings = () => {
                   <SelectItem value="planning">Sprint Planning</SelectItem>
                   <SelectItem value="review">Sprint Review</SelectItem>
                   <SelectItem value="retrospective">Retrospective</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -125,7 +165,7 @@ const Meetings = () => {
                           <h3 className="text-lg font-medium">{meeting.title}</h3>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            <span>{new Date(meeting.date).toLocaleDateString()} at {meeting.time}</span>
+                            <span>{formatDate(meeting.date)} at {meeting.time}</span>
                             <Clock className="h-4 w-4 ml-2" />
                             <span>{meeting.duration}</span>
                           </div>
@@ -150,13 +190,49 @@ const Meetings = () => {
                         </div>
                         
                         <div className="flex flex-row md:flex-col gap-2 justify-end">
-                          <Button className="flex-1 md:w-auto" onClick={() => handleStartMeeting(meeting)}>
+                          <Button 
+                            className="flex-1 md:w-auto" 
+                            onClick={() => handleStartMeeting(meeting)}
+                          >
                             <Video className="mr-2 h-4 w-4" />
                             Join
                           </Button>
-                          <Button variant="outline" className="flex-1 md:w-auto">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1 md:w-auto"
+                            onClick={() => handleEditMeeting(meeting)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                className="flex-1 md:w-auto"
+                              >
+                                <Trash className="mr-2 h-4 w-4" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this meeting? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteMeeting(meeting.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </CardContent>
@@ -190,6 +266,7 @@ const Meetings = () => {
                   <SelectItem value="planning">Sprint Planning</SelectItem>
                   <SelectItem value="review">Sprint Review</SelectItem>
                   <SelectItem value="retrospective">Retrospective</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -210,7 +287,7 @@ const Meetings = () => {
                           <h3 className="text-lg font-medium">{meeting.title}</h3>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            <span>{new Date(meeting.date).toLocaleDateString()} at {meeting.time}</span>
+                            <span>{formatDate(meeting.date)} at {meeting.time}</span>
                             <Clock className="h-4 w-4 ml-2" />
                             <span>{meeting.duration}</span>
                           </div>
@@ -245,9 +322,34 @@ const Meetings = () => {
                               No Recording
                             </Button>
                           )}
-                          <Button variant="ghost" className="flex-1 md:w-auto">
-                            View Details
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                className="flex-1 md:w-auto"
+                              >
+                                <Trash className="mr-2 h-4 w-4" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this meeting record? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteMeeting(meeting.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </CardContent>

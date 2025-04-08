@@ -12,6 +12,7 @@ export interface Meeting {
   recording?: boolean;
   recordingUrl?: string;
   jitsiRoomName?: string; // Added for Jitsi integration
+  googleMeetLink?: string; // Added for Google Meet integration
   status?: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
   userId?: string; // Added to match with DB
 }
@@ -25,4 +26,5 @@ export interface ScheduleMeetingInput {
   duration: string;
   participants: string[]; // email addresses
   meetingLink?: string;
+  preferredPlatform?: 'jitsi' | 'google-meet'; // Added for platform selection
 }
