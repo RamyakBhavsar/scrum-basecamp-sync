@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, 
   DialogTitle, DialogFooter, DialogClose 
@@ -23,20 +23,29 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 export const ScheduleMeetingDialog = ({ 
   open, 
   onOpenChange, 
-  onMeetingScheduled 
+  onMeetingScheduled,
+  initialType
 }: { 
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onMeetingScheduled: () => void;
+  initialType?: 'standup' | 'planning' | 'review' | 'retrospective' | 'other';
 }) => {
   const [title, setTitle] = useState('');
-  const [type, setType] = useState<'standup' | 'planning' | 'review' | 'retrospective' | 'other'>('standup');
+  const [type, setType] = useState<'standup' | 'planning' | 'review' | 'retrospective' | 'other'>(initialType || 'standup');
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [time, setTime] = useState('09:00');
   const [duration, setDuration] = useState('30m');
   const [participants, setParticipants] = useState<string[]>(['']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preferredPlatform, setPreferredPlatform] = useState<'jitsi' | 'google-meet'>('jitsi');
+
+  // Set type when initialType changes
+  useEffect(() => {
+    if (initialType) {
+      setType(initialType);
+    }
+  }, [initialType]);
 
   const addParticipant = () => {
     setParticipants([...participants, '']);
@@ -85,7 +94,7 @@ export const ScheduleMeetingDialog = ({
       
       // Reset form
       setTitle('');
-      setType('standup');
+      setType(initialType || 'standup');
       setDate(new Date());
       setTime('09:00');
       setDuration('30m');
@@ -123,7 +132,7 @@ export const ScheduleMeetingDialog = ({
             <Label htmlFor="type">Meeting Type</Label>
             <Select 
               value={type} 
-              onValueChange={(value) => setType(value as any)}
+              onValueChange={(value: 'standup' | 'planning' | 'review' | 'retrospective' | 'other') => setType(value)}
             >
               <SelectTrigger id="type">
                 <SelectValue placeholder="Select meeting type" />
