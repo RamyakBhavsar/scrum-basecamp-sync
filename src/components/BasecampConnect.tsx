@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ExternalLink, Check, X } from 'lucide-react';
-import { api } from '@/services/api';
+import { supabaseApi } from '@/services/supabaseApi';
 
 const BasecampConnect = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -17,13 +17,18 @@ const BasecampConnect = () => {
   
   useEffect(() => {
     // Check connection status on component mount
-    setIsConnected(api.basecamp.isConnected());
+    const checkConnection = async () => {
+      const connected = await supabaseApi.basecamp.isConnected();
+      setIsConnected(connected);
+    };
+    
+    checkConnection();
   }, []);
   
   const handleConnect = async () => {
     setIsSubmitting(true);
     try {
-      const success = await api.basecamp.connect({ email, token });
+      const success = await supabaseApi.basecamp.connect({ email, token });
       if (success) {
         setIsConnected(true);
         setIsDialogOpen(false);
@@ -36,7 +41,7 @@ const BasecampConnect = () => {
   };
   
   const handleDisconnect = async () => {
-    await api.basecamp.disconnect();
+    await supabaseApi.basecamp.disconnect();
     setIsConnected(false);
   };
   

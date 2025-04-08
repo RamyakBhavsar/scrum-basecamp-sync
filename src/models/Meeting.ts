@@ -13,6 +13,7 @@ export interface Meeting {
   recordingUrl?: string;
   jitsiRoomName?: string; // Added for Jitsi integration
   status?: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+  userId?: string; // Added to match with DB
 }
 
 export interface ScheduleMeetingInput {

@@ -9,7 +9,125 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      meetings: {
+        Row: {
+          created_at: string
+          date: string
+          duration: string
+          id: string
+          jitsi_room_name: string | null
+          meeting_link: string | null
+          participants: number | null
+          recording: boolean | null
+          recording_url: string | null
+          sprint_id: string | null
+          status: string | null
+          time: string
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          duration: string
+          id?: string
+          jitsi_room_name?: string | null
+          meeting_link?: string | null
+          participants?: number | null
+          recording?: boolean | null
+          recording_url?: string | null
+          sprint_id?: string | null
+          status?: string | null
+          time: string
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          duration?: string
+          id?: string
+          jitsi_room_name?: string | null
+          meeting_link?: string | null
+          participants?: number | null
+          recording?: boolean | null
+          recording_url?: string | null
+          sprint_id?: string | null
+          status?: string | null
+          time?: string
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          role: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          role?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          role?: string | null
+        }
+        Relationships: []
+      }
+      sprints: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          start_date: string
+          tasks: string[] | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          start_date: string
+          tasks?: string[] | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          tasks?: string[] | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -5,6 +5,7 @@ export interface Sprint {
   startDate: string; // ISO string
   endDate: string; // ISO string
   tasks: string[];
+  userId?: string;
 }
 
 export interface SprintInput {

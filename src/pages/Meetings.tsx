@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/services/api';
+import { supabaseApi } from '@/services/supabaseApi';
 import { Meeting } from '@/models/Meeting';
 import { ScheduleMeetingDialog } from '@/components/meetings/ScheduleMeetingDialog';
+import { toast } from 'sonner';
 
 const Meetings = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,13 +22,13 @@ const Meetings = () => {
   const { data: upcomingMeetings = [], isLoading: isLoadingUpcoming, refetch: refetchUpcoming } = 
     useQuery({
       queryKey: ['meetings', 'upcoming'],
-      queryFn: api.meetings.getUpcoming
+      queryFn: supabaseApi.meetings.getUpcoming
     });
     
   const { data: pastMeetings = [], isLoading: isLoadingPast, refetch: refetchPast } = 
     useQuery({
       queryKey: ['meetings', 'past'],
-      queryFn: api.meetings.getPast
+      queryFn: supabaseApi.meetings.getPast
     });
     
   // Filter meetings based on search and type
@@ -46,6 +47,16 @@ const Meetings = () => {
   const handleMeetingScheduled = () => {
     refetchUpcoming();
     refetchPast();
+  };
+
+  // Start a meeting
+  const handleStartMeeting = async (meeting: Meeting) => {
+    try {
+      await supabaseApi.meetings.startMeeting(meeting.id);
+    } catch (error) {
+      console.error('Failed to start meeting:', error);
+      toast.error('Failed to start meeting');
+    }
   };
   
   return (
@@ -139,7 +150,7 @@ const Meetings = () => {
                         </div>
                         
                         <div className="flex flex-row md:flex-col gap-2 justify-end">
-                          <Button className="flex-1 md:w-auto" onClick={() => window.open(meeting.meetingLink, '_blank')}>
+                          <Button className="flex-1 md:w-auto" onClick={() => handleStartMeeting(meeting)}>
                             <Video className="mr-2 h-4 w-4" />
                             Join
                           </Button>

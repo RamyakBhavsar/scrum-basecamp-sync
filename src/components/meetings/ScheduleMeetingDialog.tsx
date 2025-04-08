@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { api } from '@/services/api';
+import { supabaseApi } from '@/services/supabaseApi';
 import { ScheduleMeetingInput } from '@/models/Meeting';
 import { useQuery } from '@tanstack/react-query';
 
@@ -55,7 +55,7 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
   // Fetch sprints for dropdown
   const { data: sprints = [] } = useQuery({
     queryKey: ['sprints'],
-    queryFn: api.sprints.getAll,
+    queryFn: supabaseApi.sprints.getAll,
     enabled: open
   });
 
@@ -119,7 +119,7 @@ export const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await api.meetings.schedule(formData);
+      await supabaseApi.meetings.schedule(formData);
       onMeetingScheduled();
       onOpenChange(false);
     } catch (error) {

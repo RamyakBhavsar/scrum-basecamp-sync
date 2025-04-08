@@ -4,12 +4,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Calendar, 
-  Plus, 
-  ArrowRight,
-  Calendar as CalendarIcon
-} from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, ArrowRight } from 'lucide-react';
 import { 
   Select,
   SelectContent,
@@ -19,7 +14,11 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabaseApi } from '@/services/supabaseApi';
 
+// Sample backlog items (in a real app, this would come from a database)
 const backlogItems = [
   { id: 1, title: 'Implement user authentication', points: 5, status: 'To Do' },
   { id: 2, title: 'Create dashboard layout', points: 3, status: 'To Do' },
@@ -40,6 +39,43 @@ const teamMembers = [
 
 const SprintPlanning = () => {
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [sprintName, setSprintName] = useState('');
+  const [duration, setDuration] = useState('2w');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  const queryClient = useQueryClient();
+  
+  // Calculate end date based on duration
+  const calculateEndDate = () => {
+    const start = new Date(startDate);
+    const durationWeeks = parseInt(duration.replace('w', ''));
+    const end = new Date(start);
+    end.setDate(start.getDate() + durationWeeks * 7);
+    return end.toISOString().split('T')[0];
+  };
+  
+  // Get all sprints
+  const { data: sprints = [], isLoading } = useQuery({
+    queryKey: ['sprints'],
+    queryFn: supabaseApi.sprints.getAll
+  });
+  
+  // Create a new sprint
+  const createSprintMutation = useMutation({
+    mutationFn: supabaseApi.sprints.create,
+    onSuccess: () => {
+      // Invalidate sprints query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
+      // Reset form
+      setSelectedItems([]);
+      setSprintName('');
+      toast.success('Sprint created successfully!');
+    },
+    onError: (error: any) => {
+      console.error('Failed to create sprint:', error);
+      toast.error('Failed to create sprint');
+    }
+  });
   
   const handleToggleItem = (itemId: number) => {
     if (selectedItems.includes(itemId)) {
@@ -53,6 +89,29 @@ const SprintPlanning = () => {
     .filter(item => selectedItems.includes(item.id))
     .reduce((sum, item) => sum + item.points, 0);
   
+  const handleCreateSprint = () => {
+    if (!sprintName) {
+      toast.error('Please enter a sprint name');
+      return;
+    }
+    
+    if (selectedItems.length === 0) {
+      toast.error('Please select at least one backlog item');
+      return;
+    }
+    
+    const selectedTasks = backlogItems
+      .filter(item => selectedItems.includes(item.id))
+      .map(item => item.title);
+    
+    createSprintMutation.mutate({
+      title: sprintName,
+      startDate: startDate,
+      endDate: calculateEndDate(),
+      tasks: selectedTasks
+    });
+  };
+  
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -63,7 +122,7 @@ const SprintPlanning = () => {
               Plan your sprint by selecting items from the backlog and assigning them to team members.
             </p>
           </div>
-          <Button>
+          <Button onClick={handleCreateSprint} disabled={createSprintMutation.isPending}>
             <Plus className="mr-2 h-4 w-4" />
             Create Sprint
           </Button>
@@ -144,12 +203,16 @@ const SprintPlanning = () => {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Sprint Name</label>
-                  <Input placeholder="e.g. Sprint 23" />
+                  <Input 
+                    placeholder="e.g. Sprint 23" 
+                    value={sprintName}
+                    onChange={(e) => setSprintName(e.target.value)}
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Duration</label>
-                  <Select defaultValue="2w">
+                  <Select value={duration} onValueChange={setDuration}>
                     <SelectTrigger>
                       <SelectValue placeholder="Duration" />
                     </SelectTrigger>
@@ -166,7 +229,12 @@ const SprintPlanning = () => {
                   <label className="text-sm font-medium">Start Date</label>
                   <div className="relative">
                     <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input type="date" className="pl-10" />
+                    <Input 
+                      type="date" 
+                      className="pl-10"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
                   </div>
                 </div>
                 
@@ -196,11 +264,40 @@ const SprintPlanning = () => {
                   </div>
                 </div>
                 
-                <Button className="w-full" disabled={selectedItems.length === 0}>
-                  Create Sprint <ArrowRight className="ml-2 h-4 w-4" />
+                <Button 
+                  className="w-full" 
+                  onClick={handleCreateSprint} 
+                  disabled={selectedItems.length === 0 || !sprintName || createSprintMutation.isPending}
+                >
+                  {createSprintMutation.isPending ? 'Creating...' : 'Create Sprint'} <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardContent>
             </Card>
+            
+            {!isLoading && sprints.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle>Recent Sprints</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {sprints.slice(0, 3).map(sprint => (
+                      <div key={sprint.id} className="p-3 border rounded-md">
+                        <div className="flex justify-between">
+                          <span className="font-medium">{sprint.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {sprint.tasks.length} tasks
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
