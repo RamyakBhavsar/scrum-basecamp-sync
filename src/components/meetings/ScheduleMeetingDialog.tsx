@@ -101,10 +101,12 @@ export const ScheduleMeetingDialog = ({
       setParticipants(['']);
       setPreferredPlatform('jitsi');
       
+      toast.success(`Meeting scheduled using ${preferredPlatform === 'jitsi' ? 'Jitsi Meet' : 'Google Meet'}`);
       onOpenChange(false);
       onMeetingScheduled();
     } catch (error) {
       console.error('Error scheduling meeting:', error);
+      toast.error('Failed to schedule meeting');
     } finally {
       setIsSubmitting(false);
     }

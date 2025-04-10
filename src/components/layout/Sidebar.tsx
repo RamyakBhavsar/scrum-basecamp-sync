@@ -10,7 +10,8 @@ import {
   LayoutDashboard,
   MessageSquare,
   Settings,
-  Users
+  Users,
+  UserCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -49,6 +50,7 @@ export function Sidebar() {
     { icon: <Users size={20} />, label: 'Sprint Reviews', path: '/reviews' },
     { icon: <MessageSquare size={20} />, label: 'Retrospectives', path: '/retrospectives' },
     { icon: <Calendar size={20} />, label: 'Meetings', path: '/meetings' },
+    { icon: <UserCircle size={20} />, label: 'Resource Pool', path: '/resource-pool' },
   ];
 
   return (

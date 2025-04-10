@@ -13,6 +13,7 @@ import SprintReviews from "./pages/SprintReviews";
 import Retrospectives from "./pages/Retrospectives";
 import Meetings from "./pages/Meetings";
 import ResourceManagement from "./pages/ResourceManagement";
+import ResourcePool from "./pages/ResourcePool";
 import MeetingRecordings from "./pages/MeetingRecordings";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/retrospectives" element={<ProtectedRoute><Retrospectives /></ProtectedRoute>} />
             <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
             <Route path="/resources" element={<ProtectedRoute><ResourceManagement /></ProtectedRoute>} />
+            <Route path="/resource-pool" element={<ProtectedRoute><ResourcePool /></ProtectedRoute>} />
             <Route path="/recordings" element={<ProtectedRoute><MeetingRecordings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
