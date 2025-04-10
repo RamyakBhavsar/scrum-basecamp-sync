@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Download, Plus, Video } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/services/api';
+import { supabaseApi } from '@/services/supabaseApi';
 import { Meeting } from '@/models/Meeting';
 import { ScheduleMeetingDialog } from '@/components/meetings/ScheduleMeetingDialog';
 
@@ -17,7 +17,7 @@ const SprintReviews = () => {
   const { data: allMeetings = [], isLoading, refetch } = 
     useQuery({
       queryKey: ['meetings'],
-      queryFn: api.meetings.getAll
+      queryFn: supabaseApi.meetings.getAll
     });
     
   // Filter meetings for reviews only
@@ -46,7 +46,7 @@ const SprintReviews = () => {
   // Start a meeting and open the Jitsi link
   const handleJoinMeeting = async (meeting: Meeting) => {
     try {
-      await api.meetings.startMeeting(meeting.id);
+      await supabaseApi.meetings.startMeeting(meeting.id);
     } catch (error) {
       console.error('Failed to start meeting:', error);
     }
@@ -205,7 +205,7 @@ const SprintReviews = () => {
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen}
         onMeetingScheduled={handleMeetingScheduled}
-        initialType="review"
+        initialMeetingType="review"
       />
     </MainLayout>
   );
