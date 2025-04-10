@@ -9,6 +9,88 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      allocations: {
+        Row: {
+          allocation_percentage: number
+          created_at: string
+          end_date: string
+          id: string
+          project_name: string
+          resource_id: string
+          start_date: string
+          user_id: string | null
+        }
+        Insert: {
+          allocation_percentage: number
+          created_at?: string
+          end_date: string
+          id?: string
+          project_name: string
+          resource_id: string
+          start_date: string
+          user_id?: string | null
+        }
+        Update: {
+          allocation_percentage?: number
+          created_at?: string
+          end_date?: string
+          id?: string
+          project_name?: string
+          resource_id?: string
+          start_date?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allocations_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_recordings: {
+        Row: {
+          created_at: string
+          duration: number | null
+          file_size: number | null
+          id: string
+          meeting_id: string
+          recording_date: string
+          recording_url: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration?: number | null
+          file_size?: number | null
+          id?: string
+          meeting_id: string
+          recording_date?: string
+          recording_url: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration?: number | null
+          file_size?: number | null
+          id?: string
+          meeting_id?: string
+          recording_date?: string
+          recording_url?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_recordings_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meetings: {
         Row: {
           created_at: string
@@ -19,6 +101,7 @@ export type Database = {
           meeting_link: string | null
           participants: number | null
           recording: boolean | null
+          recording_available: boolean | null
           recording_url: string | null
           sprint_id: string | null
           status: string | null
@@ -36,6 +119,7 @@ export type Database = {
           meeting_link?: string | null
           participants?: number | null
           recording?: boolean | null
+          recording_available?: boolean | null
           recording_url?: string | null
           sprint_id?: string | null
           status?: string | null
@@ -53,6 +137,7 @@ export type Database = {
           meeting_link?: string | null
           participants?: number | null
           recording?: boolean | null
+          recording_available?: boolean | null
           recording_url?: string | null
           sprint_id?: string | null
           status?: string | null
@@ -95,6 +180,33 @@ export type Database = {
           id?: string
           last_name?: string | null
           role?: string | null
+        }
+        Relationships: []
+      }
+      resources: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          role?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

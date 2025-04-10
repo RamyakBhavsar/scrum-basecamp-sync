@@ -15,6 +15,7 @@ export interface Meeting {
   googleMeetLink?: string; // Added for Google Meet integration
   status?: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
   userId?: string; // Added to match with DB
+  recordingAvailable?: boolean; // Added for recording status
 }
 
 export interface ScheduleMeetingInput {
@@ -27,4 +28,11 @@ export interface ScheduleMeetingInput {
   participants: string[]; // email addresses
   meetingLink?: string;
   preferredPlatform?: 'jitsi' | 'google-meet'; // Added for platform selection
+}
+
+export interface MeetingRecordingInput {
+  meetingId: string;
+  recordingUrl: string;
+  fileSize?: number;
+  duration?: number;
 }
