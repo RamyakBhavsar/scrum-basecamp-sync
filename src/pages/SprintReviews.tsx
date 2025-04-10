@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -205,7 +204,7 @@ const SprintReviews = () => {
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen}
         onMeetingScheduled={handleMeetingScheduled}
-        initialMeetingType="review"
+        initialType="review"
       />
     </MainLayout>
   );
